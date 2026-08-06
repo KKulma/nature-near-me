@@ -29,5 +29,16 @@ export default defineConfig({
         ]
       }
     })
-  ]
+  ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'maplibre': ['maplibre-gl'],
+          'turf': ['@turf/turf'],
+          'vendor': ['react', 'react-dom', 'lucide-react', 'idb-keyval']
+        }
+      }
+    }
+  }
 });
