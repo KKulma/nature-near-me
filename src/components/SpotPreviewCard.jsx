@@ -69,8 +69,8 @@ export default function SpotPreviewCard({
           {name}
         </h3>
 
-        {/* Travel Time Chips */}
-        <div className="flex items-center gap-3 my-2.5 text-xs text-slate-600 dark:text-slate-300 font-medium">
+        {/* Travel Time Chips & Physical Size Badge */}
+        <div className="flex flex-wrap items-center gap-2 my-2.5 text-xs text-slate-600 dark:text-slate-300 font-medium">
           <span className="flex items-center gap-1 bg-white/60 dark:bg-slate-900/60 px-2.5 py-1 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
             <Footprints className="w-3.5 h-3.5 text-emerald-500" />
             ~{walkMin}m walk
@@ -79,6 +79,16 @@ export default function SpotPreviewCard({
             <Bike className="w-3.5 h-3.5 text-emerald-500" />
             ~{bikeMin}m cycle
           </span>
+          {spot.properties.areaHectares > 0 && (
+            <span className="flex items-center gap-1 bg-emerald-100/80 dark:bg-emerald-950/80 px-2.5 py-1 rounded-xl text-emerald-800 dark:text-emerald-300 font-bold">
+              📐 {spot.properties.areaHectares} ha
+            </span>
+          )}
+          {spot.properties.lengthKm > 0 && (
+            <span className="flex items-center gap-1 bg-amber-100/80 dark:bg-amber-950/80 px-2.5 py-1 rounded-xl text-amber-800 dark:text-amber-300 font-bold">
+              🥾 {spot.properties.lengthKm} km
+            </span>
+          )}
         </div>
 
         {/* Action Row */}

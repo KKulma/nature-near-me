@@ -148,52 +148,41 @@ export default function MapLibreView({
 
       if (!coords || coords.length < 2) return;
 
+      const isSelected = selectedSpot?.id === space.id;
       const category = space.properties.category || 'park';
       const categoryColor = getCategoryColor(category);
       const iconEmoji = getCategoryIcon(category);
 
-      // Create Custom Element
+      // Create Custom Element with glowing ring if selected
       const el = document.createElement('div');
-      el.className = 'group cursor-pointer transition-all hover:scale-125 z-10';
+      el.className = `group cursor-pointer transition-all duration-300 ${
+        isSelected 
+          ? 'scale-130 z-30' 
+          : 'hover:scale-125 z-10'
+      }`;
+
       el.innerHTML = `
-        <div class="w-8 h-8 rounded-full ${categoryColor.bg} border-2 border-white dark:border-slate-900 shadow-md flex items-center justify-center text-sm shadow-emerald-900/30">
-          <span>${iconEmoji}</span>
-        </div>
-      `;
-
-      // Popup Content
-      const popupHtml = `
-        <div class="space-y-1.5 font-sans">
-          <div class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
+        <div class="relative flex items-center justify-center">
+          ${isSelected ? '<div class="absolute -inset-2 rounded-full bg-emerald-400/50 animate-ping"></div>' : ''}
+          <div class="w-9 h-9 rounded-full ${categoryColor.bg} border-2 ${isSelected ? 'border-amber-300 ring-4 ring-emerald-400 shadow-2xl scale-110' : 'border-white dark:border-slate-900 shadow-md'} flex items-center justify-center text-base transition-all">
             <span>${iconEmoji}</span>
-            <span>${space.properties.categoryLabel}</span>
           </div>
-          <h3 class="font-bold text-sm leading-snug">${space.properties.name}</h3>
-          <p class="text-xs text-slate-300">📍 ${space.properties.distanceKm} km away (~${space.properties.walkMin} min walk)</p>
-          <button id="popup-btn-${space.id}" class="mt-2 w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all">
-            Explore Space →
-          </button>
         </div>
       `;
 
-      const popup = new maplibregl.Popup({ offset: 15, closeButton: false })
-        .setHTML(popupHtml);
-
-      popup.on('open', () => {
-        const btn = document.getElementById(`popup-btn-${space.id}`);
-        if (btn) {
-          btn.addEventListener('click', () => onSelectSpot(space));
-        }
+      // Direct click handler on pin
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onSelectSpot(space);
       });
 
       const marker = new maplibregl.Marker({ element: el })
         .setLngLat(coords)
-        .setPopup(popup)
         .addTo(map.current);
 
       markersRef.current.push(marker);
     });
-  }, [natureSpaces]);
+  }, [natureSpaces, selectedSpot]);
 
   // Handle Selected Spot flyTo
   useEffect(() => {
