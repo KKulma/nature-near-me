@@ -168,15 +168,13 @@ export default function MapLibreView({
 
       // Create Custom Element with glowing ring if selected
       const el = document.createElement('div');
-      el.className = `group cursor-pointer transition-all duration-300 ${
-        isSelected 
-          ? 'scale-130 z-30' 
-          : 'hover:scale-125 z-10'
+      el.className = `group cursor-pointer transition-transform duration-300 w-10 h-10 flex items-center justify-center ${
+        isSelected ? 'scale-125 z-30' : 'hover:scale-110 z-10'
       }`;
 
       el.innerHTML = `
-        <div class="relative flex items-center justify-center">
-          ${isSelected ? '<div class="absolute -inset-2 rounded-full bg-emerald-400/50 animate-ping"></div>' : ''}
+        <div class="relative flex items-center justify-center w-full h-full">
+          ${isSelected ? '<div class="absolute -inset-1.5 rounded-full bg-emerald-400/60 animate-ping"></div>' : ''}
           <div class="w-9 h-9 rounded-full ${categoryColor.bg} border-2 ${isSelected ? 'border-amber-300 ring-4 ring-emerald-400 shadow-2xl scale-110' : 'border-white dark:border-slate-900 shadow-md'} flex items-center justify-center text-base transition-all">
             <span>${iconEmoji}</span>
           </div>

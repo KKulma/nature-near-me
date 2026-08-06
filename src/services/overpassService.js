@@ -169,8 +169,18 @@ function convertOsmToGeoJSON(elements) {
     } else if (el.type === 'way' && el.nodes && el.nodes.length > 0) {
       const wayCoords = el.nodes.map(nId => nodesMap.get(nId)).filter(Boolean);
       if (wayCoords.length > 1) {
-        coords = wayCoords;
-        geomType = 'LineString';
+        // If first and last node match, it's a closed Polygon
+        const isClosed = wayCoords.length >= 4 && 
+          wayCoords[0][0] === wayCoords[wayCoords.length - 1][0] && 
+          wayCoords[0][1] === wayCoords[wayCoords.length - 1][1];
+
+        if (isClosed) {
+          coords = [wayCoords];
+          geomType = 'Polygon';
+        } else {
+          coords = wayCoords;
+          geomType = 'LineString';
+        }
       }
     }
 
@@ -182,9 +192,10 @@ function convertOsmToGeoJSON(elements) {
     features.push({
       id: `${el.type}-${el.id}`,
       type: 'Feature',
-      geometry: geomType === 'Point' 
-        ? { type: 'Point', coordinates: coords }
-        : { type: 'LineString', coordinates: coords },
+      geometry: {
+        type: geomType,
+        coordinates: coords
+      },
       properties: {
         id: `${el.type}-${el.id}`,
         name,
@@ -259,20 +270,35 @@ function processFeatures(
     let lengthKm = 0;
 
     // Spatial calculations based on geometry type
-    if (feature.geometry.type === 'Point') {
-      point = turf.point(feature.geometry.coordinates);
-      // Points default to nominal 0.5ha if unmeasured park centroid
-      areaHectares = 0.5;
-    } else if (feature.geometry.type === 'LineString') {
-      const line = turf.lineString(feature.geometry.coordinates);
-      point = turf.nearestPointOnLine(line, userPoint);
-      lengthKm = parseFloat(turf.length(line, { units: 'kilometers' }).toFixed(2));
-    } else if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
-      point = turf.centroid(feature);
-      const areaM2 = turf.area(feature);
-      areaHectares = parseFloat((areaM2 / 10000).toFixed(2)); // 1 ha = 10,000 m²
-    } else {
-      point = turf.centroid(feature);
+    try {
+      if (feature.geometry.type === 'Point') {
+        point = turf.point(feature.geometry.coordinates);
+        areaHectares = 0.5;
+      } else if (feature.geometry.type === 'Polygon' || feature.geometry.type === 'MultiPolygon') {
+        point = turf.centroid(feature);
+        const areaM2 = turf.area(feature);
+        areaHectares = parseFloat((areaM2 / 10000).toFixed(2)); // 1 ha = 10,000 m²
+      } else if (feature.geometry.type === 'LineString') {
+        const line = turf.lineString(feature.geometry.coordinates);
+        point = turf.centroid(line);
+        lengthKm = parseFloat(turf.length(line, { units: 'kilometers' }).toFixed(2));
+      } else {
+        point = turf.centroid(feature);
+      }
+    } catch (err) {
+      // Robust fallback if Turf fails on complex geometry
+      let fallbackLng = userLng;
+      let fallbackLat = userLat;
+      if (feature.geometry.type === 'Point') {
+        [fallbackLng, fallbackLat] = feature.geometry.coordinates;
+      } else if (Array.isArray(feature.geometry.coordinates)) {
+        const flat = feature.geometry.coordinates.flat(Infinity);
+        if (flat.length >= 2) {
+          fallbackLng = flat[0];
+          fallbackLat = flat[1];
+        }
+      }
+      point = turf.point([fallbackLng, fallbackLat]);
     }
 
     const distanceKm = turf.distance(userPoint, point, { units: 'kilometers' });
