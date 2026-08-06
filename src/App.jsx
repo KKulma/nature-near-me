@@ -3,6 +3,7 @@ import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import MapLibreView from './components/MapLibreView';
 import SpotSidebar from './components/SpotSidebar';
+import SpotPreviewCard from './components/SpotPreviewCard';
 import SpotDetailModal from './components/SpotDetailModal';
 import SavedFavoritesModal from './components/SavedFavoritesModal';
 import { fetchNatureSpaces } from './services/overpassService';
@@ -22,7 +23,8 @@ export default function App() {
   const [minAreaHectares, setMinAreaHectares] = useState(0.5); // Default min 0.5 ha (~5000 m²)
   const [minPathLengthKm, setMinPathLengthKm] = useState(0.2);
   const [natureSpaces, setNatureSpaces] = useState([]);
-  const [selectedSpot, setSelectedSpot] = useState(null);
+  const [selectedSpot, setSelectedSpot] = useState(null); // Spot highlighted on map with floating preview card
+  const [expandedSpot, setExpandedSpot] = useState(null); // Spot opened in full detail modal
   const [isLoading, setIsLoading] = useState(true);
   const [isLocating, setIsLocating] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState('map'); // 'map' or 'list'
@@ -66,6 +68,13 @@ export default function App() {
   useEffect(() => {
     handleLocateMe();
   }, []);
+
+  // Handle spot selection from sidebar or map pin
+  const handleSelectSpot = (spot) => {
+    setSelectedSpot(spot);
+    // On mobile, switch automatically to map view so the user sees the pin and info board
+    setActiveMobileTab('map');
+  };
 
   // Fetch nature spaces whenever userLocation, radiusKm, activeCategory, or minAreaHectares changes
   useEffect(() => {
@@ -193,15 +202,27 @@ export default function App() {
         </div>
 
         {/* Map View Container (Takes 2 columns on desktop) */}
-        <div className={`col-span-1 lg:col-span-2 h-[550px] lg:h-auto ${activeMobileTab === 'list' ? 'hidden lg:block' : 'block'}`}>
+        <div className={`relative col-span-1 lg:col-span-2 h-[550px] lg:h-auto ${activeMobileTab === 'list' ? 'hidden lg:block' : 'block'}`}>
           <MapLibreView
             userLocation={userLocation}
             radiusKm={radiusKm}
             natureSpaces={natureSpaces}
             selectedSpot={selectedSpot}
-            onSelectSpot={(spot) => setSelectedSpot(spot)}
+            onSelectSpot={handleSelectSpot}
             isDarkMode={isDarkMode}
           />
+
+          {/* Floating Google-Maps Style Preview Info Board */}
+          {selectedSpot && (
+            <SpotPreviewCard
+              spot={selectedSpot}
+              onClose={() => setSelectedSpot(null)}
+              onExpandDetail={() => setExpandedSpot(selectedSpot)}
+              isFavorite={favorites.some((f) => f.id === selectedSpot.id)}
+              onToggleFavorite={handleToggleFavorite}
+              userLocation={userLocation}
+            />
+          )}
         </div>
 
         {/* Spot Sidebar Container (Takes 1 column on desktop) */}
@@ -209,7 +230,7 @@ export default function App() {
           <SpotSidebar
             natureSpaces={natureSpaces}
             selectedSpot={selectedSpot}
-            onSelectSpot={(spot) => setSelectedSpot(spot)}
+            onSelectSpot={handleSelectSpot}
             favorites={favorites}
             onToggleFavorite={handleToggleFavorite}
             isLoading={isLoading}
@@ -218,12 +239,12 @@ export default function App() {
 
       </main>
 
-      {/* Spot Detail Modal */}
-      {selectedSpot && (
+      {/* Expanded Spot Detail Modal */}
+      {expandedSpot && (
         <SpotDetailModal
-          spot={selectedSpot}
-          onClose={() => setSelectedSpot(null)}
-          isFavorite={favorites.some((f) => f.id === selectedSpot.id)}
+          spot={expandedSpot}
+          onClose={() => setExpandedSpot(null)}
+          isFavorite={favorites.some((f) => f.id === expandedSpot.id)}
           onToggleFavorite={handleToggleFavorite}
           userLocation={userLocation}
         />
