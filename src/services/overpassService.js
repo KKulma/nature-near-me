@@ -23,54 +23,52 @@ export async function fetchNatureSpaces(
   const cacheKey = getCacheKey(userLat, userLng, radiusKm, categoryFilter);
   
   // 1. Try IndexedDB cache first
-  const cached = await getCachedData(cacheKey);
-  if (cached) {
-    console.log('Serving nature spaces from IndexedDB cache ⚡');
-    return processFeatures(cached, userLat, userLng, radiusKm, categoryFilter, minAreaHectares, minPathLengthKm);
-  }
+  let geojsonFeatures = await getCachedData(cacheKey);
 
-  // 2. Build Overpass QL query
-  const radiusMeters = Math.min(radiusKm * 1000, 25000); // Cap at 25km for performance
-  const overpassQuery = buildOverpassQuery(userLat, userLng, radiusMeters, categoryFilter);
+  if (!geojsonFeatures) {
+    // 2. Build Overpass QL query
+    const radiusMeters = Math.min(radiusKm * 1000, 25000); // Cap at 25km for performance
+    const overpassQuery = buildOverpassQuery(userLat, userLng, radiusMeters, categoryFilter);
 
-  // 3. Query Overpass API with endpoint fallback
-  let rawData = null;
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout per endpoint
+    // 3. Query Overpass API with endpoint fallback
+    let rawData = null;
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout per endpoint
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `data=${encodeURIComponent(overpassQuery)}`,
-        signal: controller.signal,
-      });
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `data=${encodeURIComponent(overpassQuery)}`,
+          signal: controller.signal,
+        });
 
-      clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
 
-      if (response.ok) {
-        rawData = await response.json();
-        break;
+        if (response.ok) {
+          rawData = await response.json();
+          break;
+        }
+      } catch (err) {
+        console.warn(`Overpass endpoint ${endpoint} failed/timed out, trying next mirror...`);
       }
-    } catch (err) {
-      console.warn(`Overpass endpoint ${endpoint} failed/timed out, trying next mirror...`);
+    }
+
+    // 4. If Overpass APIs fail or time out, fallback to enriched sample data
+    if (!rawData || !rawData.elements || rawData.elements.length === 0) {
+      console.warn('Using fallback sample data...');
+      geojsonFeatures = SAMPLE_NATURE_SPACES;
+    } else {
+      // 5. Convert raw OSM elements to clean GeoJSON features
+      geojsonFeatures = convertOsmToGeoJSON(rawData.elements);
+
+      // 6. Cache to IndexedDB for 30 minutes
+      await setCachedData(cacheKey, geojsonFeatures);
     }
   }
 
-  // 4. If Overpass APIs fail or time out, fallback to enriched sample data
-  if (!rawData || !rawData.elements || rawData.elements.length === 0) {
-    console.warn('Using fallback sample data...');
-    return processFeatures(SAMPLE_NATURE_SPACES, userLat, userLng, radiusKm, categoryFilter, minAreaHectares, minPathLengthKm);
-  }
-
-  // 5. Convert raw OSM elements to clean GeoJSON features
-  const geojsonFeatures = convertOsmToGeoJSON(rawData.elements);
-
-  // 6. Cache to IndexedDB for 30 minutes
-  await setCachedData(cacheKey, geojsonFeatures);
-
-  // 7. Process spatial metrics with Turf.js
+  // 7. Process spatial metrics with Turf.js, filter by radius & category, and sort by distance ascending
   return processFeatures(geojsonFeatures, userLat, userLng, radiusKm, categoryFilter, minAreaHectares, minPathLengthKm);
 }
 
@@ -129,13 +127,13 @@ function buildOverpassQuery(lat, lng, radiusMeters, categoryFilter) {
   }
 
   return `
-    [out:json][timeout:15];
+    [out:json][timeout:25];
     (
       ${tagSelector}
     );
-    out body center 60;
+    out body center;
     >;
-    out skel qt;
+    out skel;
   `;
 }
 
