@@ -131,6 +131,23 @@ export default function MapLibreView({
     }
   }, [userLocation, radiusKm]);
 
+  // Helper to extract clean [lng, lat] centroid for any feature type
+  const getSpotCoordinates = (space) => {
+    if (!space || !space.geometry) return null;
+    if (space.properties?.centroid && Array.isArray(space.properties.centroid) && space.properties.centroid.length >= 2) {
+      return space.properties.centroid;
+    }
+    if (space.geometry.type === 'Point' && Array.isArray(space.geometry.coordinates)) {
+      return space.geometry.coordinates;
+    }
+    try {
+      const center = turf.centroid(space);
+      return center.geometry.coordinates;
+    } catch (e) {
+      return null;
+    }
+  };
+
   // Update Nature Space Markers
   useEffect(() => {
     if (!map.current) return;
@@ -140,11 +157,7 @@ export default function MapLibreView({
     markersRef.current = [];
 
     natureSpaces.forEach((space) => {
-      const coords = space.properties.centroid || (
-        space.geometry.type === 'Point' 
-          ? space.geometry.coordinates 
-          : space.geometry.coordinates[0]
-      );
+      const coords = getSpotCoordinates(space);
 
       if (!coords || coords.length < 2) return;
 
@@ -170,7 +183,7 @@ export default function MapLibreView({
         </div>
       `;
 
-      // Direct click handler on pin
+      // Direct click handler on pin -> triggers summary popup
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         onSelectSpot(space);
@@ -184,17 +197,13 @@ export default function MapLibreView({
     });
   }, [natureSpaces, selectedSpot]);
 
-  // Handle Selected Spot flyTo
+  // Handle Selected Spot flyTo centering
   useEffect(() => {
     if (!map.current || !selectedSpot) return;
 
-    const coords = selectedSpot.properties.centroid || (
-      selectedSpot.geometry.type === 'Point' 
-        ? selectedSpot.geometry.coordinates 
-        : selectedSpot.geometry.coordinates[0]
-    );
+    const coords = getSpotCoordinates(selectedSpot);
 
-    if (coords) {
+    if (coords && coords.length >= 2) {
       map.current.flyTo({
         center: coords,
         zoom: 14.5,
