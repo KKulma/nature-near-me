@@ -76,9 +76,13 @@ export default function App() {
     setActiveMobileTab('map');
   };
 
-  // Fetch nature spaces whenever userLocation, radiusKm, activeCategory, or minAreaHectares changes
+  // Reset selection and fetch nature spaces whenever userLocation, radiusKm, activeCategory, or minAreaHectares changes
   useEffect(() => {
     let isSubscribed = true;
+
+    // Reset selected spot so the map strictly stays on user location
+    setSelectedSpot(null);
+    setExpandedSpot(null);
 
     async function loadSpaces() {
       setIsLoading(true);
@@ -118,6 +122,8 @@ export default function App() {
     setIsLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setSelectedSpot(null);
+        setExpandedSpot(null);
         setUserLocation({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
