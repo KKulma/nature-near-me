@@ -19,7 +19,7 @@ const DEFAULT_LOCATION = {
 export default function App() {
   const [userLocation, setUserLocation] = useState(DEFAULT_LOCATION);
   const [radiusKm, setRadiusKm] = useState(5);
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeCategory, setActiveCategory] = useState('forest'); // Default to Forests & Woods
   const [minAreaHectares, setMinAreaHectares] = useState(0.5); // Default min 0.5 ha (~5000 m²)
   const [minPathLengthKm, setMinPathLengthKm] = useState(0.2);
   const [natureSpaces, setNatureSpaces] = useState([]);

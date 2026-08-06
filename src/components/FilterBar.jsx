@@ -2,9 +2,8 @@ import React from 'react';
 import { Trees, Compass, ShieldAlert, Footprints, Droplets, Layers } from 'lucide-react';
 
 const CATEGORIES = [
-  { id: 'all', label: 'All Spaces', icon: Compass },
-  { id: 'park', label: 'Parks & Gardens', icon: Trees },
   { id: 'forest', label: 'Forests & Woods', icon: Trees },
+  { id: 'park', label: 'Parks & Gardens', icon: Trees },
   { id: 'reserve', label: 'Nature Reserves', icon: ShieldAlert },
   { id: 'trail', label: 'Public Footpaths', icon: Footprints },
   { id: 'water', label: 'Lakes & Water', icon: Droplets },
