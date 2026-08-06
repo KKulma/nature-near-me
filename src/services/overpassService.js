@@ -154,8 +154,42 @@ function convertOsmToGeoJSON(elements) {
   for (const el of elements) {
     if (!el.tags) continue;
     
-    // Filter private spaces if specified
-    if (el.tags.access === 'private' || el.tags.access === 'no') continue;
+    const tags = el.tags;
+    const access = (tags.access || '').toLowerCase();
+    const footAccess = (tags.foot || '').toLowerCase();
+
+    // 1. Strictly exclude private or restricted land
+    if (
+      access === 'private' || 
+      access === 'no' || 
+      access === 'destination' || 
+      access === 'customers' ||
+      footAccess === 'private' ||
+      footAccess === 'no'
+    ) {
+      continue;
+    }
+
+    const isWoodOrForest = tags.landuse === 'forest' || tags.natural === 'wood';
+    const hasExplicitName = Boolean(tags.name || tags['name:en']);
+    const hasPublicOperator = Boolean(tags.operator || tags.owner || tags.managed_by);
+    const hasPublicDesignation = Boolean(
+      tags.designation || 
+      tags.right_to_roam === 'yes' || 
+      tags.leisure || 
+      access === 'public' || 
+      access === 'yes' || 
+      access === 'permissive' ||
+      footAccess === 'designated' ||
+      footAccess === 'yes' ||
+      footAccess === 'permissive'
+    );
+
+    // 2. Filter out unnamed private farmland woods/thickets
+    // Unnamed woods without any public access tag or public operator are almost exclusively private farmland!
+    if (isWoodOrForest && !hasExplicitName && !hasPublicOperator && !hasPublicDesignation) {
+      continue;
+    }
 
     let coords = null;
     let geomType = 'Point';
@@ -184,8 +218,8 @@ function convertOsmToGeoJSON(elements) {
 
     if (!coords) continue;
 
-    const name = el.tags.name || el.tags['name:en'] || formatNameFromTags(el.tags);
-    const category = categorizeTags(el.tags);
+    const name = tags.name || tags['name:en'] || formatNameFromTags(tags);
+    const category = categorizeTags(tags);
 
     features.push({
       id: `${el.type}-${el.id}`,
@@ -199,12 +233,12 @@ function convertOsmToGeoJSON(elements) {
         name,
         category: category.id,
         categoryLabel: category.label,
-        tags: el.tags,
+        tags: tags,
         osmUrl: `https://www.openstreetmap.org/${el.type}/${el.id}`,
-        access: el.tags.access || 'public',
-        surface: el.tags.surface || 'natural',
-        dogFriendly: el.tags.dog || el.tags.dog_friendly || 'unknown',
-        wheelchair: el.tags.wheelchair || 'unknown'
+        access: tags.access || (hasPublicDesignation ? 'public' : 'public access'),
+        surface: tags.surface || 'natural',
+        dogFriendly: tags.dog || tags.dog_friendly || 'unknown',
+        wheelchair: tags.wheelchair || 'unknown'
       }
     });
   }
