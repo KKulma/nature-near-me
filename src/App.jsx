@@ -69,11 +69,16 @@ export default function App() {
     handleLocateMe();
   }, []);
 
-  // Handle spot selection from sidebar or map pin
-  const handleSelectSpot = (spot) => {
+  // When a spot is clicked from sidebar list: pan map to center on its round tree icon pin
+  const handleSelectSpotFromList = (spot) => {
     setSelectedSpot(spot);
-    // On mobile, switch automatically to map view so the user sees the pin and info board
     setActiveMobileTab('map');
+  };
+
+  // When a round tree icon pin is clicked on the map screen: center map AND open summary screen modal
+  const handlePinClick = (spot) => {
+    setSelectedSpot(spot);
+    setExpandedSpot(spot);
   };
 
   // Reset selection and fetch nature spaces whenever userLocation, radiusKm, activeCategory, or minAreaHectares changes
@@ -214,11 +219,11 @@ export default function App() {
             radiusKm={radiusKm}
             natureSpaces={natureSpaces}
             selectedSpot={selectedSpot}
-            onSelectSpot={handleSelectSpot}
+            onSelectSpot={handlePinClick}
             isDarkMode={isDarkMode}
           />
 
-          {/* Floating Google-Maps Style Preview Info Board */}
+          {/* Floating Preview Card */}
           {selectedSpot && (
             <SpotPreviewCard
               spot={selectedSpot}
@@ -236,7 +241,7 @@ export default function App() {
           <SpotSidebar
             natureSpaces={natureSpaces}
             selectedSpot={selectedSpot}
-            onSelectSpot={handleSelectSpot}
+            onSelectSpot={handleSelectSpotFromList}
             favorites={favorites}
             onToggleFavorite={handleToggleFavorite}
             isLoading={isLoading}
@@ -245,7 +250,7 @@ export default function App() {
 
       </main>
 
-      {/* Expanded Spot Detail Modal */}
+      {/* Summary Screen Modal (Pops up when round tree icon pin on map is clicked) */}
       {expandedSpot && (
         <SpotDetailModal
           spot={expandedSpot}
@@ -261,7 +266,7 @@ export default function App() {
         isOpen={isFavoritesOpen}
         onClose={() => setIsFavoritesOpen(false)}
         favorites={favorites}
-        onSelectSpot={(spot) => setSelectedSpot(spot)}
+        onSelectSpot={handlePinClick}
         onRemoveFavorite={(id) => setFavorites((prev) => prev.filter((f) => f.id !== id))}
         onClearAll={() => setFavorites([])}
       />
