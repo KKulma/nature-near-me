@@ -30,11 +30,11 @@ export default function FilterBar({
   isLoading
 }) {
   return (
-    <div className="w-full glass-panel border-b border-emerald-500/10 px-4 py-2.5 shadow-sm space-y-2">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+    <div className="w-full glass-panel border-b border-emerald-500/10 px-3 sm:px-4 py-2 shadow-sm">
+      <div className="w-full mx-auto flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2.5">
         
         {/* Category Pill Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
+        <div className="flex items-center gap-1.5 overflow-x-auto xl:overflow-visible no-scrollbar shrink-0">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             const isActive = activeCategory === cat.id;
@@ -43,7 +43,7 @@ export default function FilterBar({
               <button
                 key={cat.id}
                 onClick={() => onCategoryChange(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 ${
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all ${
                   isActive
                     ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-600/30'
                     : 'bg-white/60 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-600'
@@ -57,7 +57,7 @@ export default function FilterBar({
         </div>
 
         {/* Filters & Results Count */}
-        <div className="flex flex-wrap items-center justify-between lg:justify-end gap-3 pt-1 lg:pt-0 border-t lg:border-t-0 border-slate-200/50 dark:border-slate-800/50">
+        <div className="flex flex-wrap items-center justify-between xl:justify-end gap-2 pt-1 xl:pt-0 border-t xl:border-t-0 border-slate-200/50 dark:border-slate-800/50">
           
           {/* Results Badge */}
           <div className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
