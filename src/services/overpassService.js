@@ -433,7 +433,18 @@ function processFeatures(
       passesSizeFilter = item.properties.lengthKm >= minPathLengthKm;
     }
 
-    return withinRadius && matchesCategory && passesSizeFilter;
+    // Name exclusion filtering (e.g. exclude generic fallback named "Natural Water" or "Public park")
+    let passesNameFilter = true;
+    if (item.properties.name) {
+      const normalizedName = item.properties.name.trim().toLowerCase();
+      if (item.properties.category === 'water' && normalizedName === 'natural water') {
+        passesNameFilter = false;
+      } else if (item.properties.category === 'park' && normalizedName === 'public park') {
+        passesNameFilter = false;
+      }
+    }
+
+    return withinRadius && matchesCategory && passesSizeFilter && passesNameFilter;
   });
 
   // Sort by distance ascending
