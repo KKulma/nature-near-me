@@ -17,7 +17,7 @@ export async function fetchNatureSpaces(
   userLng, 
   radiusKm = 5, 
   categoryFilter = 'all',
-  minAreaHectares = 0.5,
+  minAreaHectares = 0,
   minPathLengthKm = 0.2
 ) {
   const cacheKey = getCacheKey(userLat, userLng, radiusKm, categoryFilter);
@@ -356,7 +356,7 @@ function processFeatures(
   userLng, 
   radiusKm, 
   categoryFilter,
-  minAreaHectares = 0.5, // default min 0.5 hectares (~5,000 m²) for woods/parks
+  minAreaHectares = 0, // default 0 (Any)
   minPathLengthKm = 0.2   // default min 200m for footpaths/trails
 ) {
   const userPoint = turf.point([userLng, userLat]);
