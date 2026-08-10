@@ -55,13 +55,13 @@ export async function fetchNatureSpaces(
       }
     }
 
-    // 4. If Overpass APIs fail or time out, fallback to enriched sample data
-    if (!rawData || !rawData.elements || rawData.elements.length === 0) {
-      console.warn('Using fallback sample data...');
+    // 4. If rawData is null (all endpoints failed), fallback to sample data. If rawData.elements is empty array, keep as []
+    if (!rawData) {
+      console.warn('Overpass endpoints unreachable, using fallback sample data...');
       geojsonFeatures = SAMPLE_NATURE_SPACES;
     } else {
       // 5. Convert raw OSM elements to clean GeoJSON features
-      geojsonFeatures = convertOsmToGeoJSON(rawData.elements);
+      geojsonFeatures = convertOsmToGeoJSON(rawData.elements || []);
 
       // 6. Cache to IndexedDB for 30 minutes
       await setCachedData(cacheKey, geojsonFeatures);
@@ -73,7 +73,7 @@ export async function fetchNatureSpaces(
 }
 
 /**
- * Build Overpass QL syntax
+ * Build Overpass QL syntax for nature spaces
  */
 function buildOverpassQuery(lat, lng, radiusMeters, categoryFilter) {
   let tagSelector = '';
@@ -157,37 +157,61 @@ function convertOsmToGeoJSON(elements) {
     const tags = el.tags;
     const access = (tags.access || '').toLowerCase();
     const footAccess = (tags.foot || '').toLowerCase();
+    const landuse = (tags.landuse || '').toLowerCase();
+    const leisure = (tags.leisure || '').toLowerCase();
 
-    // 1. Strictly exclude private or restricted land
+    // 1. Strictly exclude explicit private or restricted access tags
     if (
-      access === 'private' || 
-      access === 'no' || 
-      access === 'destination' || 
-      access === 'customers' ||
-      footAccess === 'private' ||
-      footAccess === 'no'
+      access === 'private' || access === 'no' || access === 'destination' || access === 'customers' ||
+      footAccess === 'private' || footAccess === 'no'
     ) {
       continue;
     }
 
-    const isWoodOrForest = tags.landuse === 'forest' || tags.natural === 'wood';
-    const hasExplicitName = Boolean(tags.name || tags['name:en']);
-    const hasPublicOperator = Boolean(tags.operator || tags.owner || tags.managed_by);
-    const hasPublicDesignation = Boolean(
-      tags.designation || 
-      tags.right_to_roam === 'yes' || 
-      tags.leisure || 
-      access === 'public' || 
-      access === 'yes' || 
-      access === 'permissive' ||
-      footAccess === 'designated' ||
-      footAccess === 'yes' ||
-      footAccess === 'permissive'
-    );
+    // 2. Exclude restricted landuse types (residential, industrial, farmland)
+    if (landuse === 'residential' || landuse === 'industrial' || landuse === 'military' || landuse === 'cemetery' || landuse === 'farmyard') {
+      continue;
+    }
 
-    // 2. Filter out unnamed private farmland woods/thickets
-    // Unnamed woods without any public access tag or public operator are almost exclusively private farmland!
+    // 3. Exclude golf courses and private sports facilities
+    if (leisure === 'golf_course' || leisure === 'pitch' || leisure === 'sports_centre' || leisure === 'stadium') {
+      continue;
+    }
+
+    const isWoodOrForest = landuse === 'forest' || tags.natural === 'wood';
+    const isTrail = tags.highway === 'footway' || tags.highway === 'path' || tags.highway === 'bridleway';
+    const hasExplicitName = Boolean(tags.name || tags['name:en']);
+    const operatorStr = `${tags.operator || ''} ${tags.owner || ''} ${tags.managed_by || ''}`.toLowerCase();
+    
+    const hasPublicOperator = 
+      operatorStr.includes('council') ||
+      operatorStr.includes('trust') ||
+      operatorStr.includes('forestry') ||
+      operatorStr.includes('national park') ||
+      operatorStr.includes('rspb') ||
+      operatorStr.includes('wildlife') ||
+      operatorStr.includes('nature') ||
+      operatorStr.includes('woodland') ||
+      operatorStr.includes('corporation') ||
+      operatorStr.includes('crown') ||
+      operatorStr.includes('commission');
+
+    const hasPublicDesignation = 
+      Boolean(tags.designation) || 
+      tags.right_to_roam === 'yes' || 
+      leisure === 'park' ||
+      leisure === 'nature_reserve' ||
+      tags.boundary === 'protected_area' ||
+      access === 'public' || access === 'yes' || access === 'permissive' ||
+      footAccess === 'designated' || footAccess === 'yes' || footAccess === 'permissive';
+
+    // Filter out unnamed private farmland woodlots that lack public access or public operator
     if (isWoodOrForest && !hasExplicitName && !hasPublicOperator && !hasPublicDesignation) {
+      continue;
+    }
+
+    // Filter out unnamed short service paths that lack designated foot access
+    if (isTrail && !hasExplicitName && !hasPublicOperator && !hasPublicDesignation && footAccess !== 'designated') {
       continue;
     }
 
@@ -235,7 +259,7 @@ function convertOsmToGeoJSON(elements) {
         categoryLabel: category.label,
         tags: tags,
         osmUrl: `https://www.openstreetmap.org/${el.type}/${el.id}`,
-        access: tags.access || (hasPublicDesignation ? 'public' : 'public access'),
+        access: tags.access || 'public access',
         surface: tags.surface || 'natural',
         dogFriendly: tags.dog || tags.dog_friendly || 'unknown',
         wheelchair: tags.wheelchair || 'unknown'
@@ -247,21 +271,62 @@ function convertOsmToGeoJSON(elements) {
 }
 
 /**
- * Categorize tags into clean category types
+ * Categorize tags into clean category types based on explicit OSM properties
  */
 function categorizeTags(tags) {
-  if (tags.leisure === 'nature_reserve' || tags.boundary === 'protected_area' || tags.boundary === 'national_park') {
+  const leisure = (tags.leisure || '').toLowerCase();
+  const landuse = (tags.landuse || '').toLowerCase();
+  const natural = (tags.natural || '').toLowerCase();
+  const highway = (tags.highway || '').toLowerCase();
+  const protectionTitle = (tags.protection_title || '').toLowerCase();
+
+  // 1. Explicit Parks, Gardens, Orchards & Commons
+  if (
+    leisure === 'park' || 
+    leisure === 'garden' || 
+    leisure === 'recreation_ground' || 
+    leisure === 'common' ||
+    landuse === 'village_green' ||
+    landuse === 'orchard' ||
+    landuse === 'recreation_ground' ||
+    tags.park_type ||
+    (tags.name && tags.name.toLowerCase().includes('park')) ||
+    (tags.name && tags.name.toLowerCase().includes('orchard'))
+  ) {
+    return { id: 'park', label: 'Public Park & Garden' };
+  }
+
+  // 2. Verified Nature Reserves & Protected Wildlife Sanctuaries
+  if (
+    leisure === 'nature_reserve' || 
+    tags.boundary === 'national_park' ||
+    protectionTitle.includes('nature reserve') ||
+    protectionTitle.includes('sssi') ||
+    (tags.name && tags.name.toLowerCase().includes('nature reserve'))
+  ) {
     return { id: 'reserve', label: 'Nature Reserve & Wildlife' };
   }
-  if (tags.landuse === 'forest' || tags.natural === 'wood') {
+
+  // 3. Forests & Woodland
+  if (landuse === 'forest' || natural === 'wood' || (tags.name && tags.name.toLowerCase().includes('wood'))) {
     return { id: 'forest', label: 'Forest & Woodland' };
   }
-  if (tags.highway === 'footway' || tags.highway === 'path' || tags.highway === 'bridleway') {
+
+  // 4. Public Trails & Footpaths
+  if (highway === 'footway' || highway === 'path' || highway === 'bridleway') {
     return { id: 'trail', label: 'Public Footpath & Trail' };
   }
-  if (tags.natural === 'water' || tags.waterway === 'riverbank') {
+
+  // 5. Waterbodies & Lakes
+  if (natural === 'water' || tags.waterway === 'riverbank' || tags.water) {
     return { id: 'water', label: 'Lake & Waterbody' };
   }
+
+  // 6. Generic protected areas (e.g. municipal green space / open space) fallback to park
+  if (tags.boundary === 'protected_area') {
+    return { id: 'park', label: 'Public Park & Garden' };
+  }
+
   return { id: 'park', label: 'Public Park & Garden' };
 }
 

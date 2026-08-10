@@ -9,7 +9,7 @@ export function getCacheKey(lat, lng, radiusKm, category) {
   // Round lat/lng to ~100m grid for effective key sharing
   const latGrid = Math.round(lat * 100) / 100;
   const lngGrid = Math.round(lng * 100) / 100;
-  return `nature_query_${latGrid}_${lngGrid}_${radiusKm}_${category}`;
+  return `nature_query_v3_${latGrid}_${lngGrid}_${radiusKm}_${category}`;
 }
 
 /**
