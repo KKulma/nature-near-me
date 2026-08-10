@@ -49,25 +49,37 @@ export default function MapLibreView({
     };
   }, []);
 
-  // Handle Style Switch
+  // Handle Style Switch (skip on initial mount to avoid cancelling initial flyTo animation)
+  const isFirstStyleRender = useRef(true);
   useEffect(() => {
     if (!map.current) return;
+    if (isFirstStyleRender.current) {
+      isFirstStyleRender.current = false;
+      return;
+    }
     map.current.setStyle(activeStyleUrl);
   }, [activeStyleUrl]);
 
   // Update User Location & Radius Circle
+  const prevUserLocationRef = useRef(null);
   useEffect(() => {
     if (!map.current) return;
 
     const { lat, lng } = userLocation;
+    const prevLoc = prevUserLocationRef.current;
 
-    // Fly to user location
-    map.current.flyTo({
-      center: [lng, lat],
-      zoom: 12.5,
-      essential: true,
-      duration: 1200
-    });
+    // Only flyTo when coordinates actually change or on first location set
+    const locChanged = !prevLoc || prevLoc.lat !== lat || prevLoc.lng !== lng;
+    prevUserLocationRef.current = userLocation;
+
+    if (locChanged) {
+      map.current.flyTo({
+        center: [lng, lat],
+        zoom: 12.5,
+        essential: true,
+        duration: 1200
+      });
+    }
 
     // Custom HTML Marker for User Location
     if (userMarkerRef.current) userMarkerRef.current.remove();
