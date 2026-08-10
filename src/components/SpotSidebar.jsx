@@ -7,7 +7,10 @@ export default function SpotSidebar({
   onSelectSpot,
   favorites,
   onToggleFavorite,
-  isLoading
+  isLoading,
+  activeCategory,
+  minAreaHectares,
+  onMinAreaChange
 }) {
   const [filterQuery, setFilterQuery] = useState('');
 
@@ -17,6 +20,8 @@ export default function SpotSidebar({
     const cat = spot.properties.categoryLabel || '';
     return name.toLowerCase().includes(filterQuery.toLowerCase()) || cat.toLowerCase().includes(filterQuery.toLowerCase());
   });
+
+  const showMinSizeFilter = activeCategory === 'forest' || activeCategory === 'park' || activeCategory === 'reserve';
 
   return (
     <div className="w-full h-full flex flex-col glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden">
@@ -32,6 +37,35 @@ export default function SpotSidebar({
             {filteredSpaces.length} spots
           </span>
         </div>
+
+        {/* Category-Specific Size Filter */}
+        {showMinSizeFilter && (
+          <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 px-1 uppercase tracking-wider">
+              Min Area:
+            </span>
+            <div className="flex items-center gap-1">
+              {[
+                { label: 'Any', value: 0 },
+                { label: '0.5 ha', value: 0.5 },
+                { label: '2 ha', value: 2 },
+                { label: '5 ha+', value: 5 }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => onMinAreaChange(opt.value)}
+                  className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
+                    minAreaHectares === opt.value
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Local Search Input */}
         <div className="relative">

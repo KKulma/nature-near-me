@@ -22,10 +22,6 @@ export default function FilterBar({
   onRadiusChange,
   activeCategory,
   onCategoryChange,
-  minAreaHectares,
-  onMinAreaChange,
-  minPathLengthKm,
-  onMinPathLengthChange,
   totalResults,
   isLoading
 }) {
@@ -71,31 +67,6 @@ export default function FilterBar({
                 Found <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{totalResults}</strong> natural spaces
               </span>
             )}
-          </div>
-
-          {/* Min Size Pre-Filter */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 px-1.5 uppercase tracking-wider">
-              Min Size:
-            </span>
-            {[
-              { label: 'Any', value: 0 },
-              { label: '0.5 ha', value: 0.5 },
-              { label: '2 ha', value: 2 },
-              { label: '5 ha+', value: 5 }
-            ].map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => onMinAreaChange(opt.value)}
-                className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
-                  minAreaHectares === opt.value
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
           </div>
 
           {/* Radius Selector */}

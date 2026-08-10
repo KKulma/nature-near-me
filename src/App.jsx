@@ -171,16 +171,12 @@ export default function App() {
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
       />
 
-      {/* Filter Bar (Radius + Category Pills + Min Size Filter) */}
+      {/* Filter Bar (Radius + Category Pills) */}
       <FilterBar
         radius={radiusKm}
         onRadiusChange={(r) => setRadiusKm(r)}
         activeCategory={activeCategory}
         onCategoryChange={(c) => setActiveCategory(c)}
-        minAreaHectares={minAreaHectares}
-        onMinAreaChange={(a) => setMinAreaHectares(a)}
-        minPathLengthKm={minPathLengthKm}
-        onMinPathLengthChange={(l) => setMinPathLengthKm(l)}
         totalResults={natureSpaces.length}
         isLoading={isLoading}
       />
@@ -245,6 +241,9 @@ export default function App() {
             favorites={favorites}
             onToggleFavorite={handleToggleFavorite}
             isLoading={isLoading}
+            activeCategory={activeCategory}
+            minAreaHectares={minAreaHectares}
+            onMinAreaChange={(a) => setMinAreaHectares(a)}
           />
         </div>
 
