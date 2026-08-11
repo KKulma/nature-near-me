@@ -249,6 +249,67 @@ export default function MapLibreView({
     }
   };
 
+  // Helper to show interactive popup for a selected spot
+  const showPopupForSpot = (spot) => {
+    if (!map.current || !spot) return;
+
+    const coords = getSpotCoordinates(spot);
+    if (!coords || coords.length < 2) return;
+
+    if (selectedPopupRef.current) {
+      selectedPopupRef.current.remove();
+      selectedPopupRef.current = null;
+    }
+
+    const { name, categoryLabel, distanceKm, walkMin, bikeMin, areaHectares, lengthKm } = spot.properties;
+
+    const popupEl = document.createElement('div');
+    popupEl.className = 'p-0.5 text-slate-800 dark:text-slate-100 max-w-[260px] pointer-events-auto';
+    popupEl.innerHTML = `
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold text-[10px]">
+          ${categoryLabel}
+        </span>
+        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
+          📍 ${distanceKm} km
+        </span>
+      </div>
+      <h4 class="font-extrabold text-sm text-slate-900 dark:text-slate-100 mb-2 leading-tight">
+        ${name}
+      </h4>
+      <div class="flex flex-wrap items-center gap-1.5 mb-3 text-[10px] text-slate-600 dark:text-slate-300 font-semibold">
+        <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
+          🚶 ~${walkMin}m walk
+        </span>
+        <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
+          🚴 ~${bikeMin}m cycle
+        </span>
+        ${areaHectares > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-emerald-100/60 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold">📐 ${areaHectares} ha</span>` : ''}
+        ${lengthKm > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-amber-100/60 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">🥾 ${lengthKm} km</span>` : ''}
+      </div>
+      <div class="pt-1.5 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between text-[10px] text-emerald-600 dark:text-emerald-400 font-bold popup-more-info-btn hover:underline cursor-pointer">
+        <span>Click for full details...</span>
+        <span>→</span>
+      </div>
+    `;
+
+    popupEl.querySelector('.popup-more-info-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onExpandSpot(spot);
+    });
+
+    const popup = new maplibregl.Popup({
+      closeButton: true,
+      closeOnClick: true,
+      offset: 18
+    })
+      .setLngLat(coords)
+      .setDOMContent(popupEl)
+      .addTo(map.current);
+
+    selectedPopupRef.current = popup;
+  };
+
   // Initialize Map
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
@@ -272,6 +333,11 @@ export default function MapLibreView({
     // Navigation Controls
     map.current.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     map.current.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+
+    // Deselect spot when clicking on map background
+    map.current.on('click', () => {
+      onSelectSpot(null);
+    });
 
     // Handle initial style load and canvas resize
     map.current.on('load', () => {
@@ -492,6 +558,7 @@ export default function MapLibreView({
           hoverPopupRef.current.remove();
         }
         onSelectSpot(space);
+        showPopupForSpot(space);
       });
 
       const marker = new maplibregl.Marker({ element: el })
@@ -528,64 +595,8 @@ export default function MapLibreView({
       selectedPopupRef.current = null;
     }
 
-    if (selectedSpot && map.current) {
-      const coords = getSpotCoordinates(selectedSpot);
-      if (coords && coords.length >= 2) {
-        const { name, categoryLabel, distanceKm, walkMin, bikeMin, areaHectares, lengthKm } = selectedSpot.properties;
-        
-        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${coords[1]},${coords[0]}&travelmode=walking`;
-
-        const popupEl = document.createElement('div');
-        popupEl.className = 'p-0.5 text-slate-800 dark:text-slate-100 max-w-[260px] pointer-events-auto';
-        popupEl.innerHTML = `
-          <div class="flex items-center justify-between gap-2 mb-2">
-            <span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold text-[10px]">
-              ${categoryLabel}
-            </span>
-            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
-              📍 ${distanceKm} km
-            </span>
-          </div>
-          <h4 class="font-extrabold text-sm text-slate-900 dark:text-slate-100 mb-2 leading-tight">
-            ${name}
-          </h4>
-          <div class="flex flex-wrap items-center gap-1.5 mb-3 text-[10px] text-slate-600 dark:text-slate-300 font-semibold">
-            <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
-              🚶 ~${walkMin}m walk
-            </span>
-            <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
-              🚴 ~${bikeMin}m cycle
-            </span>
-            ${areaHectares > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-emerald-100/60 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold">📐 ${areaHectares} ha</span>` : ''}
-            ${lengthKm > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-amber-100/60 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">🥾 ${lengthKm} km</span>` : ''}
-          </div>
-          <div class="pt-1.5 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between text-[10px] text-emerald-600 dark:text-emerald-400 font-bold popup-more-info-btn hover:underline cursor-pointer">
-            <span>Click for full details...</span>
-            <span>→</span>
-          </div>
-        `;
-
-        popupEl.querySelector('.popup-more-info-btn')?.addEventListener('click', (e) => {
-          e.stopPropagation();
-          onExpandSpot(selectedSpot);
-        });
-
-        const popup = new maplibregl.Popup({
-          closeButton: true,
-          closeOnClick: true,
-          offset: 18
-        })
-          .setLngLat(coords)
-          .setDOMContent(popupEl)
-          .addTo(map.current);
-
-        // Reset selectedSpot when the popup is closed (via X button or map click)
-        popup.on('close', () => {
-          onSelectSpot(prev => prev ? null : prev);
-        });
-
-        selectedPopupRef.current = popup;
-      }
+    if (selectedSpot) {
+      showPopupForSpot(selectedSpot);
     }
   }, [selectedSpot, userLocation]);
 
