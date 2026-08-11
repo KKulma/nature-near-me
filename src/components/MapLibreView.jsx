@@ -427,12 +427,12 @@ export default function MapLibreView({
       {/* Map Container */}
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* Non-intrusive Crisp Loading Badge (Solid background without backdrop-blur overlay over map canvas) */}
+      {/* Greyed-out Map Overlay with Centered Loader */}
       {isLoading && (
-        <div className="absolute top-3 right-14 z-20 animate-in fade-in duration-200 pointer-events-none">
-          <div className="px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2 border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100">
-            <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-900/25 dark:bg-slate-950/45 backdrop-blur-[1.5px] transition-all animate-in fade-in duration-300">
+          <div className="px-6 py-5 rounded-2xl shadow-2xl flex flex-col items-center gap-3 border border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 max-w-[280px] text-center animate-in zoom-in-95 duration-300">
+            <div className="w-9 h-9 border-2 border-emerald-600 dark:border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-sm font-bold tracking-tight text-slate-800 dark:text-slate-100">
               Updating spots...
             </span>
           </div>
