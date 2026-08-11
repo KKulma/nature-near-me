@@ -468,6 +468,7 @@ export default function MapLibreView({
 
       // Event Listeners for Hover Tooltip & Click
       el.addEventListener('mouseenter', () => {
+        if (selectedSpot?.id === space.id) return; // Don't show hover tooltip for already selected spot
         el.style.zIndex = '50';
         if (hoverPopupRef.current && map.current) {
           hoverPopupRef.current
