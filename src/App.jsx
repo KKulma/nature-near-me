@@ -3,7 +3,6 @@ import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import MapLibreView from './components/MapLibreView';
 import SpotSidebar from './components/SpotSidebar';
-import SpotPreviewCard from './components/SpotPreviewCard';
 import SpotDetailModal from './components/SpotDetailModal';
 import SavedFavoritesModal from './components/SavedFavoritesModal';
 import { fetchNatureSpaces } from './services/overpassService';
