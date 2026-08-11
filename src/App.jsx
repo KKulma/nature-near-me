@@ -219,6 +219,8 @@ export default function App() {
             onSelectSpot={handlePinClick}
             isDarkMode={isDarkMode}
             isLoading={isLoading}
+            onLocateMe={handleLocateMe}
+            isLocating={isLocating}
           />
 
           {/* Floating Preview Card */}

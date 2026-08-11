@@ -18,7 +18,9 @@ export default function MapLibreView({
   selectedSpot,
   onSelectSpot,
   isDarkMode,
-  isLoading
+  isLoading,
+  onLocateMe,
+  isLocating
 }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -30,6 +32,31 @@ export default function MapLibreView({
 
   const pendingCameraTargetRef = useRef(null);
   const lastAppliedCameraIdRef = useRef(null);
+
+  // Recenter map to user location on demand
+  const handleRecenterToUser = () => {
+    if (onLocateMe) {
+      onLocateMe();
+    }
+    if (!map.current || !userLocation) return;
+    const zoomLevel = getZoomForRadius(radiusKm);
+    pendingCameraTargetRef.current = {
+      center: [userLocation.lng, userLocation.lat],
+      zoom: zoomLevel,
+      id: `recenter-${Date.now()}`,
+      animate: true
+    };
+    if (map.current.isStyleLoaded()) {
+      map.current.flyTo({
+        center: [userLocation.lng, userLocation.lat],
+        zoom: zoomLevel,
+        essential: true,
+        duration: 1000
+      });
+      lastAppliedCameraIdRef.current = `recenter-${Date.now()}`;
+      pendingCameraTargetRef.current = null;
+    }
+  };
 
   // Initialize hover popup instance
   useEffect(() => {
@@ -412,12 +439,13 @@ export default function MapLibreView({
         </div>
       )}
 
-      {/* Map Layer Switcher Control */}
-      <div className="absolute top-3 left-3 z-20">
+      {/* Map Top-Left Controls (Map Layers & My Location) */}
+      <div className="absolute top-3 left-3 z-20 flex items-center gap-2">
+        {/* Map Layer Switcher Control */}
         <div className="relative">
           <button
             onClick={() => setShowStyleMenu(!showStyleMenu)}
-            className="p-2.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 shadow-md text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all flex items-center gap-2 text-xs font-bold"
+            className="p-2.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 shadow-md text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all flex items-center gap-2 text-xs font-bold cursor-pointer"
             title="Change Map Style"
           >
             <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -449,6 +477,21 @@ export default function MapLibreView({
             </div>
           )}
         </div>
+
+        {/* My Location Button */}
+        <button
+          onClick={handleRecenterToUser}
+          disabled={isLocating}
+          className="p-2.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 shadow-md text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all flex items-center gap-2 text-xs font-bold cursor-pointer disabled:opacity-70"
+          title="Go to my current location"
+        >
+          {isLocating ? (
+            <div className="w-4 h-4 border-2 border-emerald-600 dark:border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            <Navigation className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          )}
+          <span className="hidden sm:inline">My location</span>
+        </button>
       </div>
 
       {/* Map Legend */}
