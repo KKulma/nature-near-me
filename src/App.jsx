@@ -75,10 +75,9 @@ export default function App() {
     setActiveMobileTab('map');
   };
 
-  // When a round tree icon pin is clicked on the map screen: center map AND open summary screen modal
+  // When a round tree icon pin is clicked on the map screen: center map and show the floating preview card
   const handlePinClick = (spot) => {
     setSelectedSpot(spot);
-    setExpandedSpot(spot);
   };
 
   // Reset selection and fetch nature spaces whenever userLocation, radiusKm, activeCategory, or minAreaHectares changes
