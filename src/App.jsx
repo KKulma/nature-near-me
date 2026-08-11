@@ -248,6 +248,8 @@ export default function App() {
             activeCategory={activeCategory}
             minAreaHectares={minAreaHectares}
             onMinAreaChange={(a) => setMinAreaHectares(a)}
+            minPathLengthKm={minPathLengthKm}
+            onMinPathLengthChange={(l) => setMinPathLengthKm(l)}
           />
         </div>
 

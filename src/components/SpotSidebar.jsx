@@ -10,7 +10,9 @@ export default function SpotSidebar({
   isLoading,
   activeCategory,
   minAreaHectares,
-  onMinAreaChange
+  onMinAreaChange,
+  minPathLengthKm,
+  onMinPathLengthChange
 }) {
   const [filterQuery, setFilterQuery] = useState('');
 
@@ -56,6 +58,35 @@ export default function SpotSidebar({
                   onClick={() => onMinAreaChange(opt.value)}
                   className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
                     minAreaHectares === opt.value
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Trail Length Filter */}
+        {activeCategory === 'trail' && (
+          <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 px-1 uppercase tracking-wider">
+              Min Length:
+            </span>
+            <div className="flex items-center gap-1">
+              {[
+                { label: 'Any', value: 0 },
+                { label: '100m', value: 0.1 },
+                { label: '250m', value: 0.25 },
+                { label: '500m+', value: 0.5 }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => onMinPathLengthChange(opt.value)}
+                  className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-all ${
+                    minPathLengthKm === opt.value
                       ? 'bg-emerald-600 text-white shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
                   }`}

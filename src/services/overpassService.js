@@ -101,7 +101,7 @@ function buildOverpassQuery(lat, lng, radiusMeters, categoryFilter) {
       break;
     case 'trail':
       tagSelector = `
-        way["highway"="footway"]["foot"="designated"](around:${radiusMeters},${lat},${lng});
+        way["highway"="footway"](around:${radiusMeters},${lat},${lng});
         way["highway"="path"](around:${radiusMeters},${lat},${lng});
         way["highway"="bridleway"](around:${radiusMeters},${lat},${lng});
       `;
@@ -119,8 +119,9 @@ function buildOverpassQuery(lat, lng, radiusMeters, categoryFilter) {
         nwr["leisure"="nature_reserve"](around:${radiusMeters},${lat},${lng});
         nwr["landuse"="forest"](around:${radiusMeters},${lat},${lng});
         nwr["natural"="wood"](around:${radiusMeters},${lat},${lng});
-        way["highway"="footway"]["foot"="designated"](around:${radiusMeters},${lat},${lng});
+        way["highway"="footway"](around:${radiusMeters},${lat},${lng});
         way["highway"="path"](around:${radiusMeters},${lat},${lng});
+        way["highway"="bridleway"](around:${radiusMeters},${lat},${lng});
         nwr["natural"="water"](around:${radiusMeters},${lat},${lng});
       `;
       break;
@@ -210,9 +211,15 @@ function convertOsmToGeoJSON(elements) {
       continue;
     }
 
-    // Filter out unnamed short service paths that lack designated foot access
-    if (isTrail && !hasExplicitName && !hasPublicOperator && !hasPublicDesignation && footAccess !== 'designated') {
-      continue;
+    // Filter out sidewalks, crossings, and private service paths
+    if (isTrail) {
+      const footwayType = (tags.footway || '').toLowerCase();
+      const isSidewalkOrCrossing = footwayType === 'sidewalk' || footwayType === 'crossing' || tags.sidewalk || tags.crossing;
+      const isService = tags.service || tags.highway === 'service';
+      
+      if (isSidewalkOrCrossing || isService) {
+        continue;
+      }
     }
 
     let coords = null;
@@ -334,10 +341,13 @@ function categorizeTags(tags) {
  * Fallback name formatter
  */
 function formatNameFromTags(tags) {
-  if (tags.leisure) return `Public ${tags.leisure.replace('_', ' ')}`;
-  if (tags.landuse) return `${tags.landuse.replace('_', ' ')} Woods`;
-  if (tags.natural) return `Natural ${tags.natural.replace('_', ' ')}`;
-  if (tags.highway) return `Public ${tags.highway.replace('_', ' ')} Trail`;
+  if (tags.leisure) return `Public ${tags.leisure.replace(/_/g, ' ')}`;
+  if (tags.landuse) return `${tags.landuse.replace(/_/g, ' ')} Woods`;
+  if (tags.natural) return `Natural ${tags.natural.replace(/_/g, ' ')}`;
+  if (tags.highway === 'footway') return 'Public Footpath';
+  if (tags.highway === 'path') return 'Nature Trail';
+  if (tags.highway === 'bridleway') return 'Public Bridleway';
+  if (tags.highway) return `Public ${tags.highway.replace(/_/g, ' ')} Trail`;
   return 'Public Natural Space';
 }
 
