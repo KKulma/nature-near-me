@@ -205,8 +205,8 @@ function convertOsmToGeoJSON(elements) {
       access === 'public' || access === 'yes' || access === 'permissive' ||
       footAccess === 'designated' || footAccess === 'yes' || footAccess === 'permissive';
 
-    // Filter out unnamed private farmland woodlots that lack public access or public operator
-    if (isWoodOrForest && !hasExplicitName && !hasPublicOperator && !hasPublicDesignation) {
+    // Filter out private woodlands that lack public access or public operator (even if they have a name)
+    if (isWoodOrForest && !hasPublicOperator && !hasPublicDesignation) {
       continue;
     }
 
