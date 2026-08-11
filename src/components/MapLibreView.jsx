@@ -464,11 +464,6 @@ export default function MapLibreView({
                 : ''
             }
           </div>
-
-          <div class="pt-1.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-            <span>Click icon for full details</span>
-            <span>→</span>
-          </div>
         </div>
       `;
 
@@ -564,20 +559,11 @@ export default function MapLibreView({
             ${areaHectares > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-emerald-100/60 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold">📐 ${areaHectares} ha</span>` : ''}
             ${lengthKm > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-amber-100/60 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">🥾 ${lengthKm} km</span>` : ''}
           </div>
-          <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
-            <button class="popup-directions-btn px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors shadow-sm">
-              Directions
-            </button>
-            <button class="popup-more-info-btn text-emerald-600 dark:text-emerald-400 font-extrabold text-[11px] flex items-center gap-0.5 hover:underline cursor-pointer">
-              More Info & GPX →
-            </button>
+          <div class="pt-1.5 border-t border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between text-[10px] text-emerald-600 dark:text-emerald-400 font-bold popup-more-info-btn hover:underline cursor-pointer">
+            <span>Click for full details...</span>
+            <span>→</span>
           </div>
         `;
-
-        popupEl.querySelector('.popup-directions-btn')?.addEventListener('click', (e) => {
-          e.stopPropagation();
-          window.open(googleMapsUrl, '_blank');
-        });
 
         popupEl.querySelector('.popup-more-info-btn')?.addEventListener('click', (e) => {
           e.stopPropagation();
