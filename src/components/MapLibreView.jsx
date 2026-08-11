@@ -17,6 +17,7 @@ export default function MapLibreView({
   natureSpaces,
   selectedSpot,
   onSelectSpot,
+  onExpandSpot,
   isDarkMode,
   isLoading,
   onLocateMe,
@@ -27,6 +28,7 @@ export default function MapLibreView({
   const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
   const hoverPopupRef = useRef(null);
+  const selectedPopupRef = useRef(null);
   const [activeStyleUrl, setActiveStyleUrl] = useState(MAP_STYLES[0].url);
   const [showStyleMenu, setShowStyleMenu] = useState(false);
 
@@ -71,6 +73,10 @@ export default function MapLibreView({
       if (hoverPopupRef.current) {
         hoverPopupRef.current.remove();
         hoverPopupRef.current = null;
+      }
+      if (selectedPopupRef.current) {
+        selectedPopupRef.current.remove();
+        selectedPopupRef.current = null;
       }
     };
   }, []);
@@ -517,10 +523,85 @@ export default function MapLibreView({
     }
   }, [selectedSpot]);
 
-  // Update Highlighted Geometry when Selected Spot changes
+  // Update Highlighted Geometry and Interactive Popup when Selected Spot changes
   useEffect(() => {
     renderSelectedSpotHighlight();
-  }, [selectedSpot]);
+
+    // Close any previous selected popup
+    if (selectedPopupRef.current) {
+      selectedPopupRef.current.remove();
+      selectedPopupRef.current = null;
+    }
+
+    if (selectedSpot && map.current) {
+      const coords = getSpotCoordinates(selectedSpot);
+      if (coords && coords.length >= 2) {
+        const { name, categoryLabel, distanceKm, walkMin, bikeMin, areaHectares, lengthKm } = selectedSpot.properties;
+        
+        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${coords[1]},${coords[0]}&travelmode=walking`;
+
+        const popupEl = document.createElement('div');
+        popupEl.className = 'p-0.5 text-slate-800 dark:text-slate-100 max-w-[260px] pointer-events-auto';
+        popupEl.innerHTML = `
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold text-[10px]">
+              ${categoryLabel}
+            </span>
+            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
+              📍 ${distanceKm} km
+            </span>
+          </div>
+          <h4 class="font-extrabold text-sm text-slate-900 dark:text-slate-100 mb-2 leading-tight">
+            ${name}
+          </h4>
+          <div class="flex flex-wrap items-center gap-1.5 mb-3 text-[10px] text-slate-600 dark:text-slate-300 font-semibold">
+            <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
+              🚶 ~${walkMin}m walk
+            </span>
+            <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60">
+              🚴 ~${bikeMin}m cycle
+            </span>
+            ${areaHectares > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-emerald-100/60 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold">📐 ${areaHectares} ha</span>` : ''}
+            ${lengthKm > 0 ? `<span class="px-2 py-0.5 rounded-lg bg-amber-100/60 dark:bg-amber-950 text-amber-800 dark:text-amber-300 font-bold">🥾 ${lengthKm} km</span>` : ''}
+          </div>
+          <div class="flex items-center justify-between gap-3 pt-2 border-t border-slate-200/50 dark:border-slate-800/50">
+            <button class="popup-directions-btn px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors shadow-sm">
+              Directions
+            </button>
+            <button class="popup-more-info-btn text-emerald-600 dark:text-emerald-400 font-extrabold text-[11px] flex items-center gap-0.5 hover:underline cursor-pointer">
+              More Info & GPX →
+            </button>
+          </div>
+        `;
+
+        popupEl.querySelector('.popup-directions-btn')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.open(googleMapsUrl, '_blank');
+        });
+
+        popupEl.querySelector('.popup-more-info-btn')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          onExpandSpot(selectedSpot);
+        });
+
+        const popup = new maplibregl.Popup({
+          closeButton: true,
+          closeOnClick: true,
+          offset: 18
+        })
+          .setLngLat(coords)
+          .setDOMContent(popupEl)
+          .addTo(map.current);
+
+        // Reset selectedSpot when the popup is closed (via X button or map click)
+        popup.on('close', () => {
+          onSelectSpot(prev => prev ? null : prev);
+        });
+
+        selectedPopupRef.current = popup;
+      }
+    }
+  }, [selectedSpot, userLocation]);
 
   return (
     <div className="relative w-full h-full min-h-[450px] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg">

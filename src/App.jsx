@@ -216,23 +216,12 @@ export default function App() {
             natureSpaces={natureSpaces}
             selectedSpot={selectedSpot}
             onSelectSpot={handlePinClick}
+            onExpandSpot={(spot) => setExpandedSpot(spot)}
             isDarkMode={isDarkMode}
             isLoading={isLoading}
             onLocateMe={handleLocateMe}
             isLocating={isLocating}
           />
-
-          {/* Floating Preview Card */}
-          {selectedSpot && (
-            <SpotPreviewCard
-              spot={selectedSpot}
-              onClose={() => setSelectedSpot(null)}
-              onExpandDetail={() => setExpandedSpot(selectedSpot)}
-              isFavorite={favorites.some((f) => f.id === selectedSpot.id)}
-              onToggleFavorite={handleToggleFavorite}
-              userLocation={userLocation}
-            />
-          )}
         </div>
 
         {/* Spot Sidebar Container (Takes 1 column on desktop) */}
