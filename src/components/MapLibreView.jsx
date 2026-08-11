@@ -24,11 +24,29 @@ export default function MapLibreView({
   const map = useRef(null);
   const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
+  const hoverPopupRef = useRef(null);
   const [activeStyleUrl, setActiveStyleUrl] = useState(MAP_STYLES[0].url);
   const [showStyleMenu, setShowStyleMenu] = useState(false);
 
   const pendingCameraTargetRef = useRef(null);
   const lastAppliedCameraIdRef = useRef(null);
+
+  // Initialize hover popup instance
+  useEffect(() => {
+    hoverPopupRef.current = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 18,
+      className: 'custom-hover-popup'
+    });
+
+    return () => {
+      if (hoverPopupRef.current) {
+        hoverPopupRef.current.remove();
+        hoverPopupRef.current = null;
+      }
+    };
+  }, []);
 
   // Helper to determine optimal zoom level based on search radius
   const getZoomForRadius = (r) => {
@@ -238,6 +256,10 @@ export default function MapLibreView({
   useEffect(() => {
     if (!map.current) return;
 
+    if (hoverPopupRef.current) {
+      hoverPopupRef.current.remove();
+    }
+
     // Clear existing markers
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
@@ -255,21 +277,96 @@ export default function MapLibreView({
       // Create Custom Element with glowing ring if selected
       const el = document.createElement('div');
       el.className = `group cursor-pointer transition-transform duration-300 w-10 h-10 flex items-center justify-center ${
-        isSelected ? 'scale-125 z-30' : 'hover:scale-110 z-10'
+        isSelected ? 'scale-125 z-30' : 'hover:scale-125 z-10'
       }`;
 
       el.innerHTML = `
         <div class="relative flex items-center justify-center w-full h-full">
           ${isSelected ? '<div class="absolute -inset-1.5 rounded-full bg-emerald-400/60 animate-ping"></div>' : ''}
-          <div class="w-9 h-9 rounded-full ${categoryColor.bg} border-2 ${isSelected ? 'border-amber-300 ring-4 ring-emerald-400 shadow-2xl scale-110' : 'border-white dark:border-slate-900 shadow-md'} flex items-center justify-center text-base transition-all">
+          <div class="w-9 h-9 rounded-full ${categoryColor.bg} border-2 ${isSelected ? 'border-amber-300 ring-4 ring-emerald-400 shadow-2xl scale-110' : 'border-white dark:border-slate-900 shadow-md hover:shadow-xl hover:ring-2 hover:ring-emerald-400'} flex items-center justify-center text-base transition-all">
             <span>${iconEmoji}</span>
           </div>
         </div>
       `;
 
-      // Direct click handler on pin -> triggers summary popup
+      // Build Tooltip HTML with basic site details
+      const isWheelchair = space.properties.wheelchair === 'yes';
+      const isDogFriendly = space.properties.dogFriendly === 'yes';
+
+      const tooltipContent = `
+        <div class="p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800/90 shadow-2xl backdrop-blur-md text-slate-800 dark:text-slate-100 w-60 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+          <div class="flex items-center justify-between gap-1 mb-1.5">
+            <span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 font-extrabold text-[10px] tracking-wide">
+              ${iconEmoji} ${space.properties.categoryLabel}
+            </span>
+            <span class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400">
+              📍 ${space.properties.distanceKm} km
+            </span>
+          </div>
+
+          <h4 class="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-slate-100 leading-snug line-clamp-2 mb-2">
+            ${space.properties.name}
+          </h4>
+
+          <div class="flex flex-wrap items-center gap-1.5 mb-2 text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+            <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
+              🚶 ~${space.properties.walkMin}m walk
+            </span>
+            <span class="px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
+              🚴 ~${space.properties.bikeMin}m cycle
+            </span>
+            ${
+              space.properties.areaHectares > 0
+                ? `<span class="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold border border-emerald-200/50 dark:border-emerald-800/50">📐 ${space.properties.areaHectares} ha</span>`
+                : ''
+            }
+            ${
+              space.properties.lengthKm > 0
+                ? `<span class="px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 font-bold border border-amber-200/50 dark:border-amber-800/50">🥾 ${space.properties.lengthKm} km</span>`
+                : ''
+            }
+            ${
+              isWheelchair
+                ? `<span class="px-1.5 py-0.5 rounded-lg bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400 border border-sky-200/50 dark:border-sky-800/50">♿ Accessible</span>`
+                : ''
+            }
+            ${
+              isDogFriendly
+                ? `<span class="px-1.5 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/50">🐕 Dog Friendly</span>`
+                : ''
+            }
+          </div>
+
+          <div class="pt-1.5 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+            <span>Click icon for full details</span>
+            <span>→</span>
+          </div>
+        </div>
+      `;
+
+      // Event Listeners for Hover Tooltip & Click
+      el.addEventListener('mouseenter', () => {
+        el.style.zIndex = '50';
+        if (hoverPopupRef.current && map.current) {
+          hoverPopupRef.current
+            .setLngLat(coords)
+            .setHTML(tooltipContent)
+            .addTo(map.current);
+        }
+      });
+
+      el.addEventListener('mouseleave', () => {
+        el.style.zIndex = isSelected ? '30' : '10';
+        if (hoverPopupRef.current) {
+          hoverPopupRef.current.remove();
+        }
+      });
+
       el.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (hoverPopupRef.current) {
+          hoverPopupRef.current.remove();
+        }
         onSelectSpot(space);
       });
 

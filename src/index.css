@@ -27,6 +27,23 @@
 }
 
 /* MapLibre popup overrides */
+.maplibregl-popup.custom-hover-popup {
+  z-index: 60 !important;
+  pointer-events: none !important;
+}
+
+.maplibregl-popup.custom-hover-popup .maplibregl-popup-content {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.maplibregl-popup.custom-hover-popup .maplibregl-popup-tip {
+  display: none !important;
+}
+
 .maplibregl-popup-content {
   background: rgba(15, 23, 42, 0.92) !important;
   backdrop-filter: blur(16px);
