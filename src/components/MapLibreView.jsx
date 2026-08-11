@@ -13,10 +13,12 @@ const MAP_STYLES = [
 export default function MapLibreView({
   userLocation,
   radiusKm,
+  activeCategory,
   natureSpaces,
   selectedSpot,
   onSelectSpot,
-  isDarkMode
+  isDarkMode,
+  isLoading
 }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -25,15 +27,101 @@ export default function MapLibreView({
   const [activeStyleUrl, setActiveStyleUrl] = useState(MAP_STYLES[0].url);
   const [showStyleMenu, setShowStyleMenu] = useState(false);
 
+  const pendingCameraTargetRef = useRef(null);
+  const lastAppliedCameraIdRef = useRef(null);
+
+  // Helper to determine optimal zoom level based on search radius
+  const getZoomForRadius = (r) => {
+    if (r <= 1) return 14;
+    if (r <= 3) return 13;
+    if (r <= 5) return 12.5;
+    if (r <= 10) return 11.5;
+    return 10;
+  };
+
+  // Helper to apply pending camera transition safely when style is ready
+  const applyPendingCamera = () => {
+    if (!map.current || !pendingCameraTargetRef.current) return;
+    const target = pendingCameraTargetRef.current;
+    if (lastAppliedCameraIdRef.current === target.id) return;
+
+    if (map.current.isStyleLoaded()) {
+      if (target.animate) {
+        map.current.flyTo({
+          center: target.center,
+          zoom: target.zoom,
+          essential: true,
+          duration: 1000
+        });
+      } else {
+        map.current.jumpTo({
+          center: target.center,
+          zoom: target.zoom
+        });
+      }
+      lastAppliedCameraIdRef.current = target.id;
+      pendingCameraTargetRef.current = null;
+    }
+  };
+
+  // Render Radius Circle Source & Layer
+  const renderRadiusCircle = () => {
+    if (!map.current || !map.current.isStyleLoaded() || !userLocation) return;
+    const { lat, lng } = userLocation;
+
+    const circleGeoJSON = turf.circle([lng, lat], radiusKm, {
+      steps: 64,
+      units: 'kilometers'
+    });
+
+    if (map.current.getSource('radius-circle-source')) {
+      map.current.getSource('radius-circle-source').setData(circleGeoJSON);
+    } else {
+      map.current.addSource('radius-circle-source', {
+        type: 'geojson',
+        data: circleGeoJSON,
+      });
+
+      map.current.addLayer({
+        id: 'radius-circle-fill',
+        type: 'fill',
+        source: 'radius-circle-source',
+        paint: {
+          'fill-color': '#10b981',
+          'fill-opacity': 0.08,
+        },
+      });
+
+      map.current.addLayer({
+        id: 'radius-circle-line',
+        type: 'line',
+        source: 'radius-circle-source',
+        paint: {
+          'line-color': '#10b981',
+          'line-width': 2,
+          'line-dasharray': [2, 2],
+        },
+      });
+    }
+  };
+
   // Initialize Map
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
+
+    // Queue initial camera position
+    pendingCameraTargetRef.current = {
+      center: [userLocation.lng, userLocation.lat],
+      zoom: getZoomForRadius(radiusKm),
+      id: `user-${userLocation.lat}-${userLocation.lng}`,
+      animate: false
+    };
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: activeStyleUrl,
       center: [userLocation.lng, userLocation.lat],
-      zoom: 12,
+      zoom: getZoomForRadius(radiusKm),
       attributionControl: false,
     });
 
@@ -41,7 +129,36 @@ export default function MapLibreView({
     map.current.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     map.current.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
 
+    // Handle initial style load and canvas resize
+    map.current.on('load', () => {
+      if (map.current) {
+        map.current.resize();
+        applyPendingCamera();
+        renderRadiusCircle();
+      }
+    });
+
+    // Handle style changes or tile reload
+    map.current.on('styledata', () => {
+      if (map.current && map.current.isStyleLoaded()) {
+        applyPendingCamera();
+        renderRadiusCircle();
+      }
+    });
+
+    // Observe container size changes (CSS Grid / Flexbox layout adjustments)
+    const resizeObserver = new ResizeObserver(() => {
+      if (map.current) {
+        map.current.resize();
+      }
+    });
+
+    if (mapContainer.current) {
+      resizeObserver.observe(mapContainer.current);
+    }
+
     return () => {
+      resizeObserver.disconnect();
       if (map.current) {
         map.current.remove();
         map.current = null;
@@ -49,7 +166,7 @@ export default function MapLibreView({
     };
   }, []);
 
-  // Handle Style Switch (skip on initial mount to avoid cancelling initial flyTo animation)
+  // Handle Style Switch
   const isFirstStyleRender = useRef(true);
   useEffect(() => {
     if (!map.current) return;
@@ -60,25 +177,26 @@ export default function MapLibreView({
     map.current.setStyle(activeStyleUrl);
   }, [activeStyleUrl]);
 
-  // Update User Location & Radius Circle
+  // Handle User Location changes (fly camera ONLY when coordinates explicitly change)
   const prevUserLocationRef = useRef(null);
+
   useEffect(() => {
     if (!map.current) return;
 
     const { lat, lng } = userLocation;
     const prevLoc = prevUserLocationRef.current;
-
-    // Only flyTo when coordinates actually change or on first location set
     const locChanged = !prevLoc || prevLoc.lat !== lat || prevLoc.lng !== lng;
     prevUserLocationRef.current = userLocation;
 
     if (locChanged) {
-      map.current.flyTo({
+      const zoomLevel = getZoomForRadius(radiusKm);
+      pendingCameraTargetRef.current = {
         center: [lng, lat],
-        zoom: 12.5,
-        essential: true,
-        duration: 1200
-      });
+        zoom: zoomLevel,
+        id: `user-${lat}-${lng}`,
+        animate: Boolean(prevLoc) // animate if changing from an existing location
+      };
+      applyPendingCamera();
     }
 
     // Custom HTML Marker for User Location
@@ -96,51 +214,7 @@ export default function MapLibreView({
       .setLngLat([lng, lat])
       .addTo(map.current);
 
-    // Render Radius Circle Source & Layer
-    const renderRadiusCircle = () => {
-      if (!map.current || !map.current.isStyleLoaded()) return;
-
-      const circleGeoJSON = turf.circle([lng, lat], radiusKm, {
-        steps: 64,
-        units: 'kilometers'
-      });
-
-      if (map.current.getSource('radius-circle-source')) {
-        map.current.getSource('radius-circle-source').setData(circleGeoJSON);
-      } else {
-        map.current.addSource('radius-circle-source', {
-          type: 'geojson',
-          data: circleGeoJSON,
-        });
-
-        map.current.addLayer({
-          id: 'radius-circle-fill',
-          type: 'fill',
-          source: 'radius-circle-source',
-          paint: {
-            'fill-color': '#10b981',
-            'fill-opacity': 0.08,
-          },
-        });
-
-        map.current.addLayer({
-          id: 'radius-circle-line',
-          type: 'line',
-          source: 'radius-circle-source',
-          paint: {
-            'line-color': '#10b981',
-            'line-width': 2,
-            'line-dasharray': [2, 2],
-          },
-        });
-      }
-    };
-
-    if (map.current.isStyleLoaded()) {
-      renderRadiusCircle();
-    } else {
-      map.current.once('styledata', renderRadiusCircle);
-    }
+    renderRadiusCircle();
   }, [userLocation, radiusKm]);
 
   // Helper to extract clean [lng, lat] centroid for any feature type
@@ -207,19 +281,19 @@ export default function MapLibreView({
     });
   }, [natureSpaces, selectedSpot]);
 
-  // Handle Selected Spot flyTo centering
+  // Handle Selected Spot flyTo centering (ONLY when user explicitly clicks a spot pin or sidebar item)
   useEffect(() => {
     if (!map.current || !selectedSpot) return;
 
     const coords = getSpotCoordinates(selectedSpot);
-
     if (coords && coords.length >= 2) {
-      map.current.flyTo({
+      pendingCameraTargetRef.current = {
         center: coords,
         zoom: 14.5,
-        essential: true,
-        duration: 1000
-      });
+        id: `spot-${selectedSpot.id}`,
+        animate: true
+      };
+      applyPendingCamera();
     }
   }, [selectedSpot]);
 
@@ -229,12 +303,24 @@ export default function MapLibreView({
       {/* Map Container */}
       <div ref={mapContainer} className="w-full h-full" />
 
+      {/* Non-intrusive Crisp Loading Badge (Solid background without backdrop-blur overlay over map canvas) */}
+      {isLoading && (
+        <div className="absolute top-3 right-14 z-20 animate-in fade-in duration-200 pointer-events-none">
+          <div className="px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-2 border border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100">
+            <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-[11px] font-extrabold text-slate-700 dark:text-slate-200">
+              Updating spots...
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Map Layer Switcher Control */}
       <div className="absolute top-3 left-3 z-20">
         <div className="relative">
           <button
             onClick={() => setShowStyleMenu(!showStyleMenu)}
-            className="p-2.5 rounded-2xl glass-panel shadow-md text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all flex items-center gap-2 text-xs font-bold"
+            className="p-2.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 shadow-md text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all flex items-center gap-2 text-xs font-bold"
             title="Change Map Style"
           >
             <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -242,7 +328,7 @@ export default function MapLibreView({
           </button>
 
           {showStyleMenu && (
-            <div className="absolute top-full left-0 mt-2 w-48 glass-panel rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-30 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-2 z-30 animate-in fade-in zoom-in-95 duration-150">
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1">
                 Select Tile Layer
               </p>
@@ -270,7 +356,7 @@ export default function MapLibreView({
 
       {/* Map Legend */}
       <div className="absolute bottom-3 left-3 z-20 hidden md:block">
-        <div className="glass-panel px-3 py-2 rounded-2xl shadow-md border border-slate-200/60 dark:border-slate-800/60 text-[11px] flex items-center gap-3">
+        <div className="bg-white/95 dark:bg-slate-900/95 px-3 py-2 rounded-2xl shadow-md border border-slate-200/80 dark:border-slate-800/80 text-[11px] text-slate-700 dark:text-slate-200 flex items-center gap-3">
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
             <span>Park/Forest</span>

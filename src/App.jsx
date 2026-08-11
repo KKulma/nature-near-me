@@ -209,14 +209,16 @@ export default function App() {
         </div>
 
         {/* Map View Container (Takes 2 columns on desktop) */}
-        <div className={`relative col-span-1 lg:col-span-2 h-[550px] lg:h-auto ${activeMobileTab === 'list' ? 'hidden lg:block' : 'block'}`}>
+        <div className={`relative col-span-1 lg:col-span-2 h-[550px] lg:h-[640px] ${activeMobileTab === 'list' ? 'hidden lg:block' : 'block'}`}>
           <MapLibreView
             userLocation={userLocation}
             radiusKm={radiusKm}
+            activeCategory={activeCategory}
             natureSpaces={natureSpaces}
             selectedSpot={selectedSpot}
             onSelectSpot={handlePinClick}
             isDarkMode={isDarkMode}
+            isLoading={isLoading}
           />
 
           {/* Floating Preview Card */}
@@ -233,7 +235,7 @@ export default function App() {
         </div>
 
         {/* Spot Sidebar Container (Takes 1 column on desktop) */}
-        <div className={`col-span-1 h-[550px] lg:h-auto ${activeMobileTab === 'map' ? 'hidden lg:block' : 'block'}`}>
+        <div className={`col-span-1 h-[550px] lg:h-[640px] ${activeMobileTab === 'map' ? 'hidden lg:block' : 'block'}`}>
           <SpotSidebar
             natureSpaces={natureSpaces}
             selectedSpot={selectedSpot}
