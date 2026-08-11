@@ -21,7 +21,7 @@ export default function App() {
   const [radiusKm, setRadiusKm] = useState(5);
   const [activeCategory, setActiveCategory] = useState('forest'); // Default to Forests & Woods
   const [minAreaHectares, setMinAreaHectares] = useState(0); // Default min 0 (Any)
-  const [minPathLengthKm, setMinPathLengthKm] = useState(0.2);
+  const [minPathLengthKm, setMinPathLengthKm] = useState(0.5);
   const [natureSpaces, setNatureSpaces] = useState([]);
   const [selectedSpot, setSelectedSpot] = useState(null); // Spot highlighted on map with floating preview card
   const [expandedSpot, setExpandedSpot] = useState(null); // Spot opened in full detail modal

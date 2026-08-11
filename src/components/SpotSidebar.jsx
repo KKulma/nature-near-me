@@ -78,9 +78,9 @@ export default function SpotSidebar({
             <div className="flex items-center gap-1">
               {[
                 { label: 'Any', value: 0 },
-                { label: '100m', value: 0.1 },
-                { label: '250m', value: 0.25 },
-                { label: '500m+', value: 0.5 }
+                { label: '500m', value: 0.5 },
+                { label: '1km', value: 1 },
+                { label: '2km+', value: 2 }
               ].map(opt => (
                 <button
                   key={opt.value}

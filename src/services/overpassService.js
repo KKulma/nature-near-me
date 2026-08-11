@@ -18,7 +18,7 @@ export async function fetchNatureSpaces(
   radiusKm = 5, 
   categoryFilter = 'all',
   minAreaHectares = 0,
-  minPathLengthKm = 0.2
+  minPathLengthKm = 0.5
 ) {
   const cacheKey = getCacheKey(userLat, userLng, radiusKm, categoryFilter);
   
@@ -227,8 +227,6 @@ function convertOsmToGeoJSON(elements) {
 
     if (el.type === 'node') {
       coords = [el.lon, el.lat];
-    } else if (el.center) {
-      coords = [el.center.lon, el.center.lat];
     } else if (el.type === 'way' && el.nodes && el.nodes.length > 0) {
       const wayCoords = el.nodes.map(nId => nodesMap.get(nId)).filter(Boolean);
       if (wayCoords.length > 1) {
@@ -244,7 +242,11 @@ function convertOsmToGeoJSON(elements) {
           coords = wayCoords;
           geomType = 'LineString';
         }
+      } else if (el.center) {
+        coords = [el.center.lon, el.center.lat];
       }
+    } else if (el.center) {
+      coords = [el.center.lon, el.center.lat];
     }
 
     if (!coords) continue;
@@ -367,7 +369,7 @@ function processFeatures(
   radiusKm, 
   categoryFilter,
   minAreaHectares = 0, // default 0 (Any)
-  minPathLengthKm = 0.2   // default min 200m for footpaths/trails
+  minPathLengthKm = 0.5   // default min 500m for footpaths/trails
 ) {
   const userPoint = turf.point([userLng, userLat]);
 
