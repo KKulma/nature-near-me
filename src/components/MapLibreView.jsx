@@ -150,6 +150,99 @@ export default function MapLibreView({
     }
   };
 
+  // Render Highlighted Geometry for Selected Spot
+  const renderSelectedSpotHighlight = () => {
+    if (!map.current || !map.current.isStyleLoaded()) return;
+
+    let data = {
+      type: 'FeatureCollection',
+      features: []
+    };
+
+    if (selectedSpot) {
+      data = {
+        type: 'FeatureCollection',
+        features: [selectedSpot]
+      };
+    }
+
+    if (map.current.getSource('selected-spot-source')) {
+      map.current.getSource('selected-spot-source').setData(data);
+    } else {
+      map.current.addSource('selected-spot-source', {
+        type: 'geojson',
+        data: data,
+      });
+
+      // Highlight fill layer for Polygons
+      map.current.addLayer({
+        id: 'selected-spot-fill',
+        type: 'fill',
+        source: 'selected-spot-source',
+        paint: {
+          'fill-color': [
+            'match',
+            ['get', 'category'],
+            'forest', '#34d399',
+            'reserve', '#2dd4bf',
+            'trail', '#fbbf24',
+            'water', '#38bdf8',
+            '#34d399'
+          ],
+          'fill-opacity': 0.15,
+        },
+      });
+
+      // Highlight line layer for LineStrings and Polygon borders (glowing outer line)
+      map.current.addLayer({
+        id: 'selected-spot-line-glow',
+        type: 'line',
+        source: 'selected-spot-source',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': [
+            'match',
+            ['get', 'category'],
+            'forest', '#059669', // emerald-600
+            'reserve', '#0d9488', // teal-600
+            'trail', '#f59e0b', // amber-500
+            'water', '#0284c7', // sky-600
+            '#10b981' // default emerald-500
+          ],
+          'line-width': 8,
+          'line-opacity': 0.4,
+        },
+      });
+
+      // Inner solid core line
+      map.current.addLayer({
+        id: 'selected-spot-line-core',
+        type: 'line',
+        source: 'selected-spot-source',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': [
+            'match',
+            ['get', 'category'],
+            'forest', '#34d399', // emerald-400
+            'reserve', '#2dd4bf', // teal-400
+            'trail', '#fbbf24', // amber-400
+            'water', '#38bdf8', // sky-400
+            '#34d399' // default
+          ],
+          'line-width': 3.5,
+          'line-opacity': 0.9,
+        },
+      });
+    }
+  };
+
   // Initialize Map
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
@@ -180,6 +273,7 @@ export default function MapLibreView({
         map.current.resize();
         applyPendingCamera();
         renderRadiusCircle();
+        renderSelectedSpotHighlight();
       }
     });
 
@@ -188,6 +282,7 @@ export default function MapLibreView({
       if (map.current && map.current.isStyleLoaded()) {
         applyPendingCamera();
         renderRadiusCircle();
+        renderSelectedSpotHighlight();
       }
     });
 
@@ -419,6 +514,11 @@ export default function MapLibreView({
       };
       applyPendingCamera();
     }
+  }, [selectedSpot]);
+
+  // Update Highlighted Geometry when Selected Spot changes
+  useEffect(() => {
+    renderSelectedSpotHighlight();
   }, [selectedSpot]);
 
   return (
