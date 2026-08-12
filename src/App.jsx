@@ -169,12 +169,18 @@ export default function App() {
         onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
       />
 
-      {/* Filter Bar (Radius + Category Pills) */}
       <FilterBar
         radius={radiusKm}
         onRadiusChange={(r) => setRadiusKm(r)}
         activeCategory={activeCategory}
-        onCategoryChange={(c) => setActiveCategory(c)}
+        onCategoryChange={(c) => {
+          setActiveCategory(c);
+          if (c === 'water') {
+            setMinAreaHectares(0.5);
+          } else {
+            setMinAreaHectares(0);
+          }
+        }}
         totalResults={natureSpaces.length}
         isLoading={isLoading}
       />

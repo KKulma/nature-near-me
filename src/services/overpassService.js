@@ -439,7 +439,7 @@ function processFeatures(
     
     // Size & Length Pre-filtering
     let passesSizeFilter = true;
-    if (minAreaHectares > 0 && (item.properties.category === 'forest' || item.properties.category === 'park' || item.properties.category === 'reserve')) {
+    if (minAreaHectares > 0 && (item.properties.category === 'forest' || item.properties.category === 'park' || item.properties.category === 'reserve' || item.properties.category === 'water')) {
       passesSizeFilter = item.properties.areaHectares >= minAreaHectares;
     } else if (minPathLengthKm > 0 && item.properties.category === 'trail') {
       passesSizeFilter = item.properties.lengthKm >= minPathLengthKm;

@@ -23,7 +23,7 @@ export default function SpotSidebar({
     return name.toLowerCase().includes(filterQuery.toLowerCase()) || cat.toLowerCase().includes(filterQuery.toLowerCase());
   });
 
-  const showMinSizeFilter = activeCategory === 'forest' || activeCategory === 'park' || activeCategory === 'reserve';
+  const showMinSizeFilter = activeCategory === 'forest' || activeCategory === 'park' || activeCategory === 'reserve' || activeCategory === 'water';
 
   return (
     <div className="w-full h-full flex flex-col glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden">
@@ -47,12 +47,17 @@ export default function SpotSidebar({
               Min Area:
             </span>
             <div className="flex items-center gap-1">
-              {[
+              {(activeCategory === 'water' ? [
+                { label: 'Any', value: 0 },
+                { label: '0.5 ha', value: 0.5 },
+                { label: '1 ha', value: 1 },
+                { label: '5 ha+', value: 5 }
+              ] : [
                 { label: 'Any', value: 0 },
                 { label: '0.5 ha', value: 0.5 },
                 { label: '2 ha', value: 2 },
                 { label: '5 ha+', value: 5 }
-              ].map(opt => (
+              ]).map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => onMinAreaChange(opt.value)}
