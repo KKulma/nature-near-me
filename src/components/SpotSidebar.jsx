@@ -25,6 +25,46 @@ export default function SpotSidebar({
 
   const showMinSizeFilter = activeCategory === 'forest' || activeCategory === 'park' || activeCategory === 'reserve' || activeCategory === 'water';
 
+  const getMinAreaOptions = () => {
+    switch (activeCategory) {
+      case 'park':
+        return [
+          { label: 'Any', value: 0 },
+          { label: '0.5 ha', value: 0.5 },
+          { label: '2 ha', value: 2 },
+          { label: '10 ha+', value: 10 }
+        ];
+      case 'forest':
+        return [
+          { label: 'Any', value: 0 },
+          { label: '1 ha', value: 1 },
+          { label: '5 ha', value: 5 },
+          { label: '20 ha+', value: 20 }
+        ];
+      case 'reserve':
+        return [
+          { label: 'Any', value: 0 },
+          { label: '2 ha', value: 2 },
+          { label: '10 ha', value: 10 },
+          { label: '50 ha+', value: 50 }
+        ];
+      case 'water':
+        return [
+          { label: 'Any', value: 0 },
+          { label: '0.5 ha', value: 0.5 },
+          { label: '1 ha', value: 1 },
+          { label: '5 ha+', value: 5 }
+        ];
+      default:
+        return [
+          { label: 'Any', value: 0 },
+          { label: '0.5 ha', value: 0.5 },
+          { label: '2 ha', value: 2 },
+          { label: '5 ha+', value: 5 }
+        ];
+    }
+  };
+
   return (
     <div className="w-full h-full flex flex-col glass-panel rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg overflow-hidden">
       
@@ -47,17 +87,7 @@ export default function SpotSidebar({
               Min Area:
             </span>
             <div className="flex items-center gap-1">
-              {(activeCategory === 'water' ? [
-                { label: 'Any', value: 0 },
-                { label: '0.5 ha', value: 0.5 },
-                { label: '1 ha', value: 1 },
-                { label: '5 ha+', value: 5 }
-              ] : [
-                { label: 'Any', value: 0 },
-                { label: '0.5 ha', value: 0.5 },
-                { label: '2 ha', value: 2 },
-                { label: '5 ha+', value: 5 }
-              ]).map(opt => (
+              {getMinAreaOptions().map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => onMinAreaChange(opt.value)}
